@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SiteLock Guard - Admin Security & Settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <!-- Toast notification -->
+  <div class="toast" id="toast"></div>
+
+  <!-- ADMIN GATEKEEPER LOCK SCREEN (Protects settings from unauthorized users) -->
+  <div class="admin-gate-overlay" id="adminGate">
+    <div class="gate-backdrop-grid"></div>
+    <div class="gate-glow-orb"></div>
+    <div class="gate-card">
+      <div class="gate-emblem">
+        <svg viewBox="0 0 24 24">
+          <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+        </svg>
+      </div>
+      <h2 class="gate-title">Admin Access Required</h2>
+      <p class="gate-subtitle">Enter your Master PIN to view or change passwords and security configurations.</p>
+      
+      <div class="gate-error" id="gateError" style="display: none;"></div>
+
+      <form id="gateForm" class="gate-form">
+        <div class="gate-input-box">
+          <input type="password" id="gatePinInput" maxlength="8" placeholder="Master PIN (Default: 1234)" autofocus autocomplete="off" required>
+          <button type="button" class="gate-view-btn" id="gateToggleBtn">Show</button>
+        </div>
+        <button type="submit" class="gate-submit-btn" id="gateSubmitBtn">Unlock Admin Panel</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- PROTECTED OPTIONS LAYOUT (Revealed only after Master PIN authentication) -->
+  <div class="options-layout" id="protectedLayout" style="display: none;">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon-box">
+          <svg viewBox="0 0 24 24">
+            <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+          </svg>
+        </div>
+        <div>
+          <h2 class="brand-name">SiteLock Guard</h2>
+          <span class="version-tag">Admin Panel • Brave/Chrome</span>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <a href="#section-pins" class="nav-item active">
+          <svg viewBox="0 0 24 24"><path d="M12.65 10C11.83 7.67 9.61 6 7 6c-3.31 0-6 2.69-6 6s2.69 6 6 6c2.61 0 4.83-1.67 5.65-4H17v4h4v-4h2v-4H12.65zM7 14c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg>
+          Passcodes & PINs
+        </a>
+        <a href="#section-duress" class="nav-item">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+          Duress & Decoy Action
+        </a>
+        <a href="#section-boss" class="nav-item">
+          <svg viewBox="0 0 24 24"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg>
+          Panic / Boss Key (F3)
+        </a>
+        <a href="#section-intruder" class="nav-item">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 14h-2v-2h2v2zm0-4h-2V7h2v5z"/></svg>
+          Intruder Video Trap
+        </a>
+        <a href="#section-sites" class="nav-item">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+          Protected Websites
+        </a>
+        <a href="#section-session" class="nav-item">
+          <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+          Session & Refresh Lock
+        </a>
+        <a href="#section-logs" class="nav-item">
+          <svg viewBox="0 0 24 24"><path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+          Security Logs
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="lock-all-btn" id="sidebarLockAllBtn">
+          <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2z"/></svg>
+          Lock All Sites Now
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Header Alert if default PIN is active -->
+      <div class="alert-box warning" id="defaultPinWarning" style="display: none;">
+        <svg viewBox="0 0 24 24" class="alert-icon"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+        <div>
+          <h4>Security Alert: Default Master PIN is Active</h4>
+          <p>You are currently using the default PIN <code>1234</code>. Please change your Master PIN and Duress PIN below immediately.</p>
+        </div>
+      </div>
+
+      <!-- SECTION 1: PASSCODES & PINS -->
+      <section class="card-section" id="section-pins">
+        <div class="section-header">
+          <div class="section-title-wrap">
+            <h3 class="section-title">Passcodes & PIN Configuration</h3>
+            <p class="section-subtitle">Manage your real unlock Master PIN and secondary decoy Duress PIN.</p>
+          </div>
+        </div>
+
+        <form id="pinForm" class="settings-form">
+          <div class="form-group">
+            <label for="currentMasterPin">Current Master PIN <span class="required">*</span></label>
+            <div class="input-wrap">
+              <input type="password" id="currentMasterPin" maxlength="8" placeholder="Current Master PIN" autocomplete="off" required>
+              <button type="button" class="view-toggle-btn" data-target="currentMasterPin">Show</button>
+            </div>
+            <span class="field-hint">Required to verify authorization before saving changes.</span>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="newMasterPin">New Master PIN</label>
+              <div class="input-wrap">
+                <input type="password" id="newMasterPin" maxlength="8" placeholder="4 to 8 numeric digits" autocomplete="off">
+                <button type="button" class="view-toggle-btn" data-target="newMasterPin">Show</button>
+              </div>
+              <span class="field-hint">Real PIN to unlock websites.</span>
+            </div>
+
+            <div class="form-group">
+              <label for="confirmMasterPin">Confirm New Master PIN</label>
+              <div class="input-wrap">
+                <input type="password" id="confirmMasterPin" maxlength="8" placeholder="Re-type Master PIN" autocomplete="off">
+                <button type="button" class="view-toggle-btn" data-target="confirmMasterPin">Show</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-divider"></div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="newDuressPin">Duress / Hidden PIN</label>
+              <div class="input-wrap">
+                <input type="password" id="newDuressPin" maxlength="8" placeholder="4 to 8 digits (Default: 0000)" autocomplete="off">
+                <button type="button" class="view-toggle-btn" data-target="newDuressPin">Show</button>
+              </div>
+              <span class="field-hint">Entering this secret PIN activates decoy protection.</span>
+            </div>
+
+            <div class="form-group">
+              <label for="confirmDuressPin">Confirm Duress PIN</label>
+              <div class="input-wrap">
+                <input type="password" id="confirmDuressPin" maxlength="8" placeholder="Re-type Duress PIN" autocomplete="off">
+                <button type="button" class="view-toggle-btn" data-target="confirmDuressPin">Show</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn-primary" id="savePinsBtn">Save New Passcodes</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- SECTION 2: DURESS & DECOY BEHAVIOR -->
+      <section class="card-section" id="section-duress">
+        <div class="section-header">
+          <div class="section-title-wrap">
+            <h3 class="section-title">Duress / Decoy Protection Mode</h3>
+            <p class="section-subtitle">Choose what happens when the secret Duress PIN is entered on a locked website.</p>
+          </div>
+        </div>
+
+        <div class="radio-cards-grid">
+          <!-- Option 1: Error Screen (Recommended) -->
+          <label class="radio-card">
+            <input type="radio" name="duressAction" value="error_screen" id="duressErrorScreen">
+            <div class="radio-card-body">
+              <div class="radio-card-header">
+                <div class="card-icon-wrap emerald">
+                  <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                </div>
+                <div class="radio-title-wrap">
+                  <span class="radio-title">Simulate Connection Failure <span class="badge-recommended">Recommended</span></span>
+                  <span class="radio-desc">Renders an authentic, pixel-perfect Chromium/Brave "This site can't be reached (ERR_CONNECTION_REFUSED)" error.</span>
+                </div>
+              </div>
+              <p class="radio-extra">Keeps the original URL in the address bar (e.g. <code>instagram.com</code>) so onlookers believe the site is genuinely offline!</p>
+            </div>
+          </label>
+
+          <!-- Option 2: Redirect -->
+          <label class="radio-card">
+            <input type="radio" name="duressAction" value="redirect" id="duressRedirect">
+            <div class="radio-card-body">
+              <div class="radio-card-header">
+                <div class="card-icon-wrap cyan">
+                  <svg viewBox="0 0 24 24"><path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>
+                </div>
+                <div class="radio-title-wrap">
+                  <span class="radio-title">Redirect to Decoy Website</span>
+                  <span class="radio-desc">Instantly navigates away to a harmless website like Google Search or Wikipedia.</span>
+                </div>
+              </div>
+              <div class="decoy-url-config" id="decoyUrlWrap">
+                <label for="decoyUrlInput">Decoy Destination URL</label>
+                <input type="url" id="decoyUrlInput" placeholder="https://www.google.com" value="https://www.google.com">
+              </div>
+            </div>
+          </label>
+
+          <!-- Option 3: Close Tab -->
+          <label class="radio-card">
+            <input type="radio" name="duressAction" value="close_tab" id="duressCloseTab">
+            <div class="radio-card-body">
+              <div class="radio-card-header">
+                <div class="card-icon-wrap red">
+                  <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                </div>
+                <div class="radio-title-wrap">
+                  <span class="radio-title">Instantly Close Tab</span>
+                  <span class="radio-desc">Immediately dismisses and closes the browser tab.</span>
+                </div>
+              </div>
+            </div>
+          </label>
+        </div>
+
+        <div class="form-actions" style="margin-top: 16px;">
+          <button type="button" class="btn-primary" id="saveDuressConfigBtn">Save Decoy Settings</button>
+        </div>
+
+        <!-- Stealth Recovery Hatches Guide for Owner -->
+        <div class="stealth-info-card" style="margin-top: 24px; background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 12px; padding: 18px;">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+            <span style="font-size: 20px;">🤫</span>
+            <strong style="color: var(--primary); font-size: 14px;">Owner Stealth Recovery Hatches (Disarm Decoy Mode)</strong>
+          </div>
+          <p style="font-size: 13px; color: var(--text-dim); line-height: 1.5; margin-bottom: 12px;">
+            When you enter your Duress PIN in front of someone, the site appears completely broken or redirects to a decoy. To regain access without revealing anything to onlookers:
+          </p>
+          <ul style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.7; padding-left: 20px; margin: 0;">
+            <li><strong>Secret URL Bypass:</strong> Type <code>#unlock</code> at the end of the URL (e.g., <code>instagram.com#unlock</code>). Decoy mode disarms instantly and the secret tag is automatically erased from your browser address bar.</li>
+            <li><strong>Invisible Air Typing:</strong> If showing the fake network error screen, simply type your real Master or Site PIN directly on your keyboard. It unlocks silently with <em>zero</em> visible text boxes!</li>
+            <li><strong>Secret Icon Click:</strong> Triple-click the gray connection error icon on the fake error screen, or press <kbd style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; padding: 2px 6px; font-size: 11px;">Shift + Esc</kbd>.</li>
+            <li><strong>Teleport from Decoy Site:</strong> If redirected to Google or another decoy site, press <kbd style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; padding: 2px 6px; font-size: 11px;">Shift + Esc</kbd> or <kbd style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; padding: 2px 6px; font-size: 11px;">Cmd + Shift + L</kbd> to disarm and instantly return.</li>
+            <li><strong>Toolbar Extension Popup:</strong> Click the SiteLock extension icon and click <strong>Disarm Decoy</strong>.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- SECTION 2.5: PANIC / BOSS KEY (F3) -->
+      <section class="card-section" id="section-boss">
+        <div class="section-header">
+          <div class="section-title-wrap">
+            <h3 class="section-title">Panic / Boss Hotkey (<kbd class="hotkey-badge">F3</kbd>)</h3>
+            <p class="section-subtitle">Instantly hide any sensitive tab, relock it immediately, and teleport to a safe website like YouTube.</p>
+          </div>
+        </div>
+
+        <form id="bossKeyForm" class="settings-form">
+          <!-- Boss Key Enable Toggle -->
+          <div class="setting-toggle-row">
+            <div class="toggle-info">
+              <span class="toggle-title">Enable Panic / Boss Key</span>
+              <span class="toggle-desc">Pressing your chosen hotkey immediately blacks out the screen, wipes temporary unlock tokens, and teleports to your safe site.</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="bossKeyToggle" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="form-divider"></div>
+
+          <!-- Hotkey Selector & Action -->
+          <div class="form-row">
+            <div class="form-group">
+              <label for="bossKeySelect">Trigger Hotkey</label>
+              <select id="bossKeySelect" class="styled-select">
+                <option value="F3" selected>F3 (Recommended)</option>
+                <option value="F2">F2</option>
+                <option value="Alt+L">Alt + L (Option + L on Mac)</option>
+                <option value="Escape">Escape Key</option>
+              </select>
+              <span class="field-hint">Pressing this key anywhere on a protected site triggers panic mode.</span>
+            </div>
+
+            <div class="form-group">
+              <label for="bossActionSelect">Panic Response Action</label>
+              <select id="bossActionSelect" class="styled-select">
+                <option value="redirect" selected>Redirect to Safe Website (Recommended)</option>
+                <option value="close_tab">Immediately Close Tab</option>
+              </select>
+              <span class="field-hint">Choose whether to open a safe website or kill the tab.</span>
+            </div>
+          </div>
+
+          <!-- Safe Destination URL with Quick Presets -->
+          <div class="form-group" id="bossRedirectWrap">
+            <label for="bossRedirectInput">Safe Redirect Destination URL</label>
+            <div class="input-wrap">
+              <input type="url" id="bossRedirectInput" placeholder="https://www.youtube.com" value="https://www.youtube.com">
+            </div>
+
+            <div class="preset-links-row" style="margin-top: 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <span style="font-size: 12px; color: var(--text-dim);">Quick Presets:</span>
+              <button type="button" class="chip boss-preset-chip" data-url="https://www.youtube.com">▶️ YouTube</button>
+              <button type="button" class="chip boss-preset-chip" data-url="https://docs.google.com">📄 Google Docs</button>
+              <button type="button" class="chip boss-preset-chip" data-url="https://www.google.com">🔍 Google Search</button>
+              <button type="button" class="chip boss-preset-chip" data-url="https://en.wikipedia.org">📚 Wikipedia</button>
+            </div>
+          </div>
+
+          <!-- Explanatory Guide Box -->
+          <div class="stealth-info-card" style="margin-top: 16px; background: rgba(59, 130, 246, 0.06); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 12px; padding: 14px 16px;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+              <span style="font-size: 16px;">⚡</span>
+              <strong style="color: #60a5fa; font-size: 13px;">Instant Camouflage & History Replacement</strong>
+            </div>
+            <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin: 0;">
+              When you hit <kbd class="hotkey-badge">F3</kbd>, the screen blacks out in under 1ms, your temporary unlock session is permanently revoked from storage, and the tab replaces its URL with YouTube. If an onlooker clicks the browser's Back button, the site remains strictly locked behind your PIN!
+            </p>
+          </div>
+
+          <div class="form-actions" style="margin-top: 18px;">
+            <button type="submit" class="btn-primary" id="saveBossConfigBtn">Save Boss Key Settings</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- SECTION 2.7: INTRUDER PUNISHMENT VIDEO TRAP -->
+      <section class="card-section" id="section-intruder">
+        <div class="section-header">
+          <div class="section-title-wrap">
+            <h3 class="section-title">Intruder Video Trap (<kbd class="hotkey-badge">Esc + Esc</kbd> to Exit)</h3>
+            <p class="section-subtitle">Troll unauthorized snoopers who repeatedly type wrong passcodes with a full-screen looping punishment video with NO controls.</p>
+          </div>
+        </div>
+
+        <form id="intruderForm" class="settings-form">
+          <!-- Intruder Trap Enable Toggle -->
+          <div class="setting-toggle-row">
+            <div class="toggle-info">
+              <span class="toggle-title">Enable Intruder Punishment Video</span>
+              <span class="toggle-desc">When enabled, exceeding wrong passcode attempts traps the screen with your chosen YouTube video in full screen with controls disabled.</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="intruderToggle" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="form-divider"></div>
+
+          <!-- Trigger Threshold Dropdown -->
+          <div class="form-row">
+            <div class="form-group">
+              <label for="intruderAttemptsSelect">Trigger Threshold (Wrong Attempts)</label>
+              <select id="intruderAttemptsSelect" class="styled-select">
+                <option value="1">After 1 Failed Attempt (Instant)</option>
+                <option value="2">After 2 Failed Attempts</option>
+                <option value="3">After 3 Failed Attempts</option>
+                <option value="4" selected>After 4 Failed Attempts (More than 3 times - Recommended)</option>
+                <option value="5">After 5 Failed Attempts</option>
+              </select>
+              <span class="field-hint">Triggers punishment immediately when an intruder reaches this limit.</span>
+            </div>
+          </div>
+
+          <!-- Video URL Input with Presets -->
+          <div class="form-group">
+            <label for="intruderVideoInput">YouTube Punishment Video URL</label>
+            <div class="input-wrap">
+              <input type="url" id="intruderVideoInput" placeholder="https://www.youtube.com/watch?v=1CouGcNKICc" value="https://www.youtube.com/watch?v=1CouGcNKICc">
+            </div>
+
+            <div class="preset-links-row" style="margin-top: 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <span style="font-size: 12px; color: var(--text-dim);">Quick Presets:</span>
+              <button type="button" class="chip intruder-preset-chip active" data-url="https://www.youtube.com/watch?v=1CouGcNKICc">🎯 Troll Video (1CouGcNKICc)</button>
+              <button type="button" class="chip intruder-preset-chip" data-url="https://www.youtube.com/watch?v=dQw4w9WgXcQ">🎵 Classic Rickroll</button>
+            </div>
+          </div>
+
+          <!-- Owner Escape Hatch Explanation Box -->
+          <div class="stealth-info-card" style="margin-top: 16px; background: rgba(239, 68, 68, 0.06); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 12px; padding: 14px 16px;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+              <span style="font-size: 16px;">🚨</span>
+              <strong style="color: #f87171; font-size: 13px;">Owner Escape Secret: Double-Tap Escape (<kbd class="hotkey-badge">Esc + Esc</kbd>)</strong>
+            </div>
+            <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin: 0;">
+              The punishment video plays with <strong>all player controls and clicks completely blocked</strong> so the intruder is completely trapped. When you want to regain access, simply double-tap <kbd class="hotkey-badge">Escape</kbd> twice quickly within 1.5s. The video dissolves and your PIN screen is immediately restored!
+            </p>
+          </div>
+
+          <div class="form-actions" style="margin-top: 18px;">
+            <button type="submit" class="btn-primary" id="saveIntruderConfigBtn">Save Intruder Trap Settings</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- SECTION 3: PROTECTED WEBSITES -->
+      <section class="card-section" id="section-sites">
+        <div class="section-header">
+          <div class="section-title-wrap">
+            <h3 class="section-title">Protected Websites</h3>
+            <p class="section-subtitle">Manage which websites trigger the PIN lock screen.</p>
+          </div>
+        </div>
+
+        <!-- Quick Presets -->
+        <div class="presets-block">
+          <span class="presets-label">Popular Sensitive Apps:</span>
+          <div class="presets-chips" id="presetChips">
+            <button type="button" class="chip" data-domain="instagram.com">+ Instagram</button>
+            <button type="button" class="chip" data-domain="web.whatsapp.com">+ WhatsApp</button>
+            <button type="button" class="chip" data-domain="x.com">+ X (Twitter)</button>
+            <button type="button" class="chip" data-domain="reddit.com">+ Reddit</button>
+            <button type="button" class="chip" data-domain="discord.com">+ Discord</button>
+            <button type="button" class="chip" data-domain="facebook.com">+ Facebook</button>
+            <button type="button" class="chip" data-domain="youtube.com">+ YouTube</button>
+            <button type="button" class="chip" data-domain="tiktok.com">+ TikTok</button>
+          </div>
+        </div>
+
+        <!-- Add Custom Site Form -->
+        <form id="addSiteForm" class="add-site-card-form">
+          <div class="add-site-inputs">
+            <div class="form-group site-domain-group">
+              <label for="newSiteInput">Website Domain</label>
+              <input type="text" id="newSiteInput" placeholder="e.g. instagram.com, web.whatsapp.com" required>
+            </div>
+            <div class="form-group site-pin-group">
+              <label for="newSitePinInput">Custom Passcode (Optional)</label>
+              <input type="password" id="newSitePinInput" maxlength="8" placeholder="Blank = Master PIN">
+            </div>
+          </div>
+          <button type="submit" class="btn-primary add-site-btn" id="addSiteBtn">+ Add Protected Site</button>
+        </form>
+
+        <!-- List of Locked Sites -->
+        <div class="sites-list-container">
+          <div class="sites-list-header">
+            <span>Currently Locked (<span id="siteCount">0</span>)</span>
+            <button type="button" class="text-btn" id="removeAllSitesBtn">Clear All</button>
+          </div>
+          <div class="sites-grid" id="lockedSitesGrid"></div>
+        </div>
+      </section>
+
+      <!-- SECTION 4: SESSION & LOCKOUT -->
+      <section class="card-section" id="section-session">
+        <div class="section-header">
+          <div class="section-title-wrap">
+            <h3 class="section-title">Session & Refresh Lockout Policy</h3>
+            <p class="section-subtitle">Define whether sites re-lock on every page reload or remain unlocked for a duration.</p>
+          </div>
+        </div>
+
+        <div class="form-group" style="max-width: 440px;">
+          <label for="sessionTimeoutSelect">Auto-Relock Policy</label>
+          <select id="sessionTimeoutSelect" class="styled-select">
+            <option value="refresh" selected>Lock on every page refresh & tab reopen (Recommended)</option>
+            <option value="15m">Keep unlocked for 15 Minutes</option>
+            <option value="30m">Keep unlocked for 30 Minutes</option>
+            <option value="1h">Keep unlocked for 1 Hour</option>
+          </select>
+          <span class="field-hint">When set to "Lock on every page refresh", refreshing (Cmd+R/F5) or closing/reopening the tab will immediately bring back the lock screen.</span>
+        </div>
+
+        <div class="form-actions" style="margin-top: 16px;">
+          <button type="button" class="btn-primary" id="saveTimeoutBtn">Save Policy</button>
+        </div>
+      </section>
+
+      <!-- SECTION 5: SECURITY AUDIT LOGS -->
+      <section class="card-section" id="section-logs">
+        <div class="section-header">
+          <div class="section-title-wrap">
+            <h3 class="section-title">Local Security Audit Trail</h3>
+            <p class="section-subtitle">Local log of unlock events, failed attempts, and duress triggers. Stored 100% locally on your computer.</p>
+          </div>
+          <button type="button" class="btn-secondary" id="clearLogsBtn">Clear History</button>
+        </div>
+
+        <div class="logs-table-wrap">
+          <table class="logs-table">
+            <thead>
+              <tr>
+                <th>Event Type</th>
+                <th>Details</th>
+                <th>Timestamp</th>
+              </tr>
+            </thead>
+            <tbody id="logsTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- SITE PIN MODAL DIALOG -->
+  <div class="modal-overlay" id="sitePinModal" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <h3 class="modal-title" id="sitePinModalTitle">Set Passcode for Website</h3>
+          <p class="modal-subtitle">Configure an individual PIN for this site. Master PIN remains active as admin key.</p>
+        </div>
+        <button type="button" class="modal-close-btn" id="closeSitePinModalBtn">✕</button>
+      </div>
+
+      <form id="sitePinModalForm" class="settings-form">
+        <input type="hidden" id="sitePinModalDomain">
+        
+        <div class="form-group">
+          <label for="modalSitePinInput">Custom Passcode (4 to 8 digits)</label>
+          <div class="input-wrap">
+            <input type="password" id="modalSitePinInput" maxlength="8" placeholder="Enter custom PIN" required>
+            <button type="button" class="view-toggle-btn" data-target="modalSitePinInput">Show</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="modalSitePinConfirm">Confirm Passcode</label>
+          <div class="input-wrap">
+            <input type="password" id="modalSitePinConfirm" maxlength="8" placeholder="Re-type PIN to confirm" required>
+            <button type="button" class="view-toggle-btn" data-target="modalSitePinConfirm">Show</button>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-danger" id="modalRemoveSitePinBtn" style="display: none;">Remove Custom PIN</button>
+          <div style="display: flex; gap: 8px; margin-left: auto;">
+            <button type="button" class="btn-secondary" id="modalCancelSitePinBtn">Cancel</button>
+            <button type="submit" class="btn-primary" id="modalSaveSitePinBtn">Save Passcode</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

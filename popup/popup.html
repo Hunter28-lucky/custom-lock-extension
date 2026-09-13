@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SiteLock Guard</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <!-- Top Header -->
+    <header class="popup-header">
+      <div class="brand">
+        <div class="logo-wrap">
+          <svg viewBox="0 0 24 24" class="logo-icon">
+            <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="brand-title">SiteLock Guard</h1>
+          <span class="brand-sub">Privacy & Decoy Lock</span>
+        </div>
+      </div>
+      <button class="icon-btn" id="openSettingsBtn" title="Security Settings">
+        <svg viewBox="0 0 24 24">
+          <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+        </svg>
+      </button>
+    </header>
+
+    <!-- Default PIN Warning Banner (dismissible or shown if default) -->
+    <div class="default-pin-banner" id="defaultPinBanner" style="display: none;">
+      <div class="banner-text">
+        <strong>Default PIN active (1234)</strong>
+        <span>Set your custom Master & Duress PINs in Settings.</span>
+      </div>
+      <button class="banner-action" id="bannerSettingsBtn">Set PIN</button>
+    </div>
+
+    <!-- Active Tab Domain Card -->
+    <div class="active-site-card">
+      <div class="site-info-row">
+        <div class="site-icon-box">
+          <svg viewBox="0 0 24 24" class="domain-svg">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+          </svg>
+        </div>
+        <div class="site-meta">
+          <span class="site-label">Active Website</span>
+          <div class="site-domain" id="currentDomain">Checking...</div>
+        </div>
+        <label class="switch" id="toggleSwitchWrap" title="Protect this site">
+          <input type="checkbox" id="protectToggle" disabled>
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="site-status-footer">
+        <div class="status-indicator">
+          <span class="status-dot" id="statusDot"></span>
+          <span class="status-text" id="statusText">Detecting status...</span>
+        </div>
+        <button class="mini-btn" id="lockThisSiteBtn" style="display: none;">Lock Now</button>
+        <button class="mini-btn danger" id="disarmDecoyBtn" style="display: none;">Disarm Decoy</button>
+      </div>
+    </div>
+
+    <!-- Quick Controls -->
+    <div class="quick-actions">
+      <button class="action-card-btn" id="lockAllBtn">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-1 6h2v2h-2V7zm0 4h2v6h-2v-6z"/>
+        </svg>
+        <div class="btn-copy">
+          <span class="btn-title">Lock All Active Tabs</span>
+          <span class="btn-desc">Immediate relock across browser</span>
+        </div>
+      </button>
+
+      <button class="action-card-btn secondary" id="manageSitesBtn">
+        <svg viewBox="0 0 24 24">
+          <path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z"/>
+        </svg>
+        <div class="btn-copy">
+          <span class="btn-title">Manage Locked Sites</span>
+          <span class="btn-desc" id="protectedCountDesc">0 websites protected</span>
+        </div>
+      </button>
+    </div>
+
+    <!-- Duress Quick Notice -->
+    <div class="duress-info-box">
+      <div class="duress-badge">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+        </svg>
+        <span>Duress Mode: <strong id="duressModeLabel">Error Screen</strong></span>
+      </div>
+      <span class="duress-hint">Entering your hidden PIN simulates a network failure</span>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
