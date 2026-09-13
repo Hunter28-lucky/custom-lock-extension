@@ -51,7 +51,7 @@
 
 | Credential | Default Value | Description |
 | :--- | :--- | :--- |
-| **Master PIN** | `1234` | Universal passcode to unlock any protected site. |
+| **Master PIN** | `282006` | Universal passcode to unlock any protected site. |
 | **Duress PIN** | `9999` | Triggers fake network error or decoy redirect. |
 | **Intruder Limit** | `4 Attempts` | Triggers full-screen punishment video trap. |
 | **Boss Key** | `F3` | Instant blackout and safe site redirect. |

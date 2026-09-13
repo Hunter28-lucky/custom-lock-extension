@@ -2491,7 +2491,7 @@
     });
 
     // 2. Secret Keypress Buffer (Silent keyboard entry on fake error screen)
-    // The user can literally just type "1234" on their keyboard in thin air to unlock!
+    // The user can literally just type "282006" on their keyboard in thin air to unlock!
     let typedDigits = '';
     let typedTimer = null;
 

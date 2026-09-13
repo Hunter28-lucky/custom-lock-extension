@@ -12,7 +12,7 @@ const DEFAULT_LOCKED_DOMAINS = [
   'discord.com'
 ];
 
-const DEFAULT_MASTER_PIN = '1234';
+const DEFAULT_MASTER_PIN = '282006';
 const DEFAULT_DURESS_PIN = '0000';
 
 // Cryptographic Utilities
@@ -83,6 +83,13 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     updates.masterPinHash = await hashPinWithSalt(DEFAULT_MASTER_PIN, salt);
     updates.duressPinHash = await hashPinWithSalt(DEFAULT_DURESS_PIN, salt);
     updates.isMasterDefault = true;
+  } else {
+    // If user is currently using the old default (1234) or isMasterDefault is true, migrate to 282006
+    const oldDefaultHash = await hashPinWithSalt('1234', data.salt);
+    if (data.isMasterDefault || data.masterPinHash === oldDefaultHash) {
+      updates.masterPinHash = await hashPinWithSalt(DEFAULT_MASTER_PIN, data.salt);
+      updates.isMasterDefault = true;
+    }
   }
 
   if (!data.sitePins) {
@@ -154,6 +161,24 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     });
   }
 });
+
+// Ensure default PIN is migrated to 282006 on service worker startup
+async function ensureDefaultPinMigrated() {
+  try {
+    const data = await chrome.storage.local.get(['salt', 'masterPinHash', 'isMasterDefault']);
+    if (data.salt) {
+      const oldHash = await hashPinWithSalt('1234', data.salt);
+      if (data.isMasterDefault || data.masterPinHash === oldHash) {
+        const newHash = await hashPinWithSalt(DEFAULT_MASTER_PIN, data.salt);
+        await chrome.storage.local.set({
+          masterPinHash: newHash,
+          isMasterDefault: true
+        });
+      }
+    }
+  } catch {}
+}
+ensureDefaultPinMigrated();
 
 // Helper to log security events (limited to last 50 events)
 async function recordAudit(type, details) {
