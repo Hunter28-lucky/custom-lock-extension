@@ -22,7 +22,7 @@
 - **Anti-History Leak**: Uses history replacement so pressing the browser's Back button keeps the website strictly locked behind your PIN.
 
 ### 4. 🎭 Duress & Decoy Protection ("Fake Error Mode")
-- If forced to unlock your screen in front of someone, type your secret **Duress PIN** (default `9999`):
+- If forced to unlock your screen in front of someone, type your secret **Duress PIN**:
   - **Authentic Network Error**: Instantly renders a pixel-perfect Chromium "This site can’t be reached (`ERR_CONNECTION_REFUSED`)" error while keeping the original URL in the address bar. Onlookers believe your internet or the site is genuinely offline!
   - **Decoy Redirect**: Optionally redirects to a safe decoy website (e.g. Google).
   - **Stealth Recovery Hatches**: Append `#unlock` to the URL, type your real PIN in thin air, or press <kbd>Shift</kbd> + <kbd>Esc</kbd> to disarm decoy mode silently.
@@ -51,8 +51,8 @@
 
 | Credential | Default Value | Description |
 | :--- | :--- | :--- |
-| **Master PIN** | `282006` | Universal passcode to unlock any protected site. |
-| **Duress PIN** | `9999` | Triggers fake network error or decoy redirect. |
+| **Master PIN** | *Configured on Setup* | Universal passcode to unlock any protected site. |
+| **Duress PIN** | *Configured on Setup* | Triggers fake network error or decoy redirect. |
 | **Intruder Limit** | `4 Attempts` | Triggers full-screen punishment video trap. |
 | **Boss Key** | `F3` | Instant blackout and safe site redirect. |
 

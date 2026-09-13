@@ -26,7 +26,7 @@ SiteLock Guard is a privacy and website lock extension engineered for Brave and 
    - Salted SHA-256 cryptographic hashing ensures your PIN is never stored in plaintext.
 
 3. **Duress / Hidden PIN Protection ("Panic Decoy Mode")**:
-   - If someone forces you to unlock a website, enter your secret Duress PIN (default `0000`).
+   - If someone forces you to unlock a website, enter your secret Duress PIN.
    - **Simulate Connection Failure**: Instantly displays an authentic, pixel-perfect Chromium/Brave "This site can't be reached (ERR_CONNECTION_REFUSED)" error with a working reload simulation while keeping the original URL in the address bar. The intruder will believe the website or WiFi is genuinely offline!
    - **Decoy Redirect**: Optionally redirects immediately to Google, Wikipedia, or a custom decoy URL.
    - **Close Tab**: Instantly closes the active tab.

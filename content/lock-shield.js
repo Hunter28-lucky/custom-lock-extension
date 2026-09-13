@@ -1285,12 +1285,12 @@
       }
 
       .unlocking-anim {
-        animation: unlockSuccess 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        animation: unlockSuccess 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
       }
       @keyframes unlockSuccess {
         0% { transform: scale(1); opacity: 1; }
-        45% { transform: scale(1.06); opacity: 0.95; }
-        100% { transform: scale(0.85); opacity: 0; }
+        45% { transform: scale(1.04); opacity: 0.95; }
+        100% { transform: scale(0.9); opacity: 0; }
       }
     `;
 
@@ -1557,6 +1557,41 @@
       });
     }
 
+    let pinDebounceTimer = null;
+
+    async function checkInstantMatch() {
+      if (currentPin.length < 4 || isVerifying || lockoutTimer) return;
+
+      if (config.salt) {
+        const pinToTest = currentPin;
+        const localHash = await hashPinWithSalt(pinToTest, config.salt);
+        if (pinToTest !== currentPin) return;
+
+        const sitePins = config.sitePins || {};
+        const isMaster = config.masterPinHash && localHash === config.masterPinHash;
+        const isSite = sitePins[domainName] && localHash === sitePins[domainName];
+        const isDuress = config.duressPinHash && localHash === config.duressPinHash;
+
+        if (isMaster || isSite || isDuress) {
+          if (pinDebounceTimer) {
+            clearTimeout(pinDebounceTimer);
+            pinDebounceTimer = null;
+          }
+          submitPin();
+          return;
+        }
+      }
+
+      // Max PIN length reached without matching: auto-submit immediately
+      if (currentPin.length >= 8) {
+        if (pinDebounceTimer) {
+          clearTimeout(pinDebounceTimer);
+          pinDebounceTimer = null;
+        }
+        submitPin();
+      }
+    }
+
     function appendDigit(d) {
       if (isVerifying || lockoutTimer) return;
       if (currentPin.length >= 8) return;
@@ -1565,17 +1600,31 @@
       updateDots();
       statusMsg.textContent = '';
 
-      if (currentPin.length >= 4) {
-        setTimeout(() => {
+      if (pinDebounceTimer) {
+        clearTimeout(pinDebounceTimer);
+        pinDebounceTimer = null;
+      }
+
+      // Instant match test: unlocks in <0.05ms hardware-accelerated SHA-256
+      checkInstantMatch();
+
+      // If length >= 4 and not yet matched, debounce auto-submit for wrong PINs
+      // Gives ample time (650ms) to type remaining digits of 5, 6, 7, 8 digit PINs (like 282006)
+      if (currentPin.length >= 4 && currentPin.length < 8) {
+        pinDebounceTimer = setTimeout(() => {
           if (currentPin.length >= 4 && !isVerifying) {
             submitPin();
           }
-        }, 120);
+        }, 650);
       }
     }
 
     function deleteDigit() {
       if (isVerifying || lockoutTimer) return;
+      if (pinDebounceTimer) {
+        clearTimeout(pinDebounceTimer);
+        pinDebounceTimer = null;
+      }
       if (currentPin.length > 0) {
         currentPin = currentPin.slice(0, -1);
         updateDots();
@@ -1585,6 +1634,10 @@
 
     function clearDigits() {
       if (isVerifying || lockoutTimer) return;
+      if (pinDebounceTimer) {
+        clearTimeout(pinDebounceTimer);
+        pinDebounceTimer = null;
+      }
       currentPin = '';
       updateDots();
       statusMsg.textContent = '';
@@ -1611,74 +1664,84 @@
 
     async function submitPin() {
       if (isVerifying || lockoutTimer || !currentPin) return;
+      if (pinDebounceTimer) {
+        clearTimeout(pinDebounceTimer);
+        pinDebounceTimer = null;
+      }
       isVerifying = true;
 
       const stayUnlocked = session15mCheckbox.checked;
+      const pinToVerify = currentPin;
 
-      // Dual-Layer Verification:
-      // Try background worker, but have fast local fallback using Web Crypto API
+      // FAST-PATH: Local Web Crypto verification first (< 0.05ms)
       let res = null;
-
-      try {
-        res = await new Promise((resolve) => {
-          chrome.runtime.sendMessage(
-            {
-              type: 'VERIFY_PIN',
-              pin: currentPin,
-              domain: domainName,
-              stayUnlockedFor15m: stayUnlocked
-            },
-            (response) => {
-              if (chrome.runtime.lastError) {
-                resolve(null);
-              } else {
-                resolve(response);
-              }
-            }
-          );
-        });
-      } catch {}
-
-      // If service worker was suspended or failed, verify directly via Web Crypto!
-      if (!res && config.salt && config.masterPinHash) {
-        const localHash = await hashPinWithSalt(currentPin, config.salt);
+      if (config.salt) {
+        const localHash = await hashPinWithSalt(pinToVerify, config.salt);
         const sitePins = config.sitePins || {};
         const sitePinHash = sitePins[domainName];
 
-        if (sitePinHash && localHash === sitePinHash) {
-          res = { success: true, isMaster: true, isSitePin: true, domain: domainName };
-          const { unlockedDomainsMap = {} } = await chrome.storage.local.get('unlockedDomainsMap');
-          if (stayUnlocked) {
-            unlockedDomainsMap[domainName] = Date.now() + 15 * 60 * 1000;
-          } else {
-            delete unlockedDomainsMap[domainName];
-          }
-          await chrome.storage.local.set({ unlockedDomainsMap });
-        } else if (localHash === config.masterPinHash) {
-          res = { success: true, isMaster: true, domain: domainName };
-          // Save or clear 15m session token in storage.local
-          const { unlockedDomainsMap = {} } = await chrome.storage.local.get('unlockedDomainsMap');
-          if (stayUnlocked) {
-            unlockedDomainsMap[domainName] = Date.now() + 15 * 60 * 1000;
-          } else {
-            delete unlockedDomainsMap[domainName];
-          }
-          await chrome.storage.local.set({ unlockedDomainsMap });
+        if ((sitePinHash && localHash === sitePinHash) || (config.masterPinHash && localHash === config.masterPinHash)) {
+          res = { success: true, isMaster: true, isSitePin: Boolean(sitePinHash && localHash === sitePinHash), domain: domainName };
         } else if (config.duressPinHash && localHash === config.duressPinHash) {
           res = {
             success: true,
             isDuress: true,
-            duressAction: config.duressAction,
-            decoyUrl: config.decoyUrl,
-            decoyErrorCode: config.decoyErrorCode,
+            duressAction: config.duressAction || 'error_screen',
+            decoyUrl: config.decoyUrl || 'https://www.google.com',
+            decoyErrorCode: config.decoyErrorCode || 'ERR_CONNECTION_REFUSED',
             domain: domainName
           };
-          const { decoyActiveDomains = {} } = await chrome.storage.local.get('decoyActiveDomains');
-          decoyActiveDomains[domainName] = Date.now() + 10 * 60 * 1000;
-          await chrome.storage.local.set({ decoyActiveDomains });
-        } else {
-          res = { success: false, error: 'Incorrect Passcode' };
         }
+      }
+
+      // If local fast-path verified, fire background sync asynchronously without blocking UI!
+      if (res && res.success) {
+        (async () => {
+          try {
+            if (res.isMaster) {
+              const { unlockedDomainsMap = {} } = await chrome.storage.local.get('unlockedDomainsMap');
+              if (stayUnlocked) {
+                unlockedDomainsMap[domainName] = Date.now() + 15 * 60 * 1000;
+              } else {
+                delete unlockedDomainsMap[domainName];
+              }
+              await chrome.storage.local.set({ unlockedDomainsMap });
+            } else if (res.isDuress) {
+              const { decoyActiveDomains = {} } = await chrome.storage.local.get('decoyActiveDomains');
+              decoyActiveDomains[domainName] = Date.now() + 10 * 60 * 1000;
+              await chrome.storage.local.set({ decoyActiveDomains });
+            }
+          } catch {}
+          try {
+            chrome.runtime.sendMessage({
+              type: 'VERIFY_PIN',
+              pin: pinToVerify,
+              domain: domainName,
+              stayUnlockedFor15m: stayUnlocked
+            });
+          } catch {}
+        })();
+      } else {
+        // Fallback: If not matched locally (e.g. settings updated in another tab), check service worker
+        try {
+          res = await new Promise((resolve) => {
+            chrome.runtime.sendMessage(
+              {
+                type: 'VERIFY_PIN',
+                pin: pinToVerify,
+                domain: domainName,
+                stayUnlockedFor15m: stayUnlocked
+              },
+              (response) => {
+                if (chrome.runtime.lastError) {
+                  resolve(null);
+                } else {
+                  resolve(response);
+                }
+              }
+            );
+          });
+        } catch {}
       }
 
       isVerifying = false;
@@ -1693,7 +1756,7 @@
         statusMsg.textContent = 'Access granted';
         resetFailedAttempts();
 
-        // RADIANT UNLOCK SHOCKWAVE EFFECT
+        // FAST RADIANT UNLOCK SHOCKWAVE EFFECT
         const shockwave = document.createElement('div');
         shockwave.className = 'unlock-shockwave';
         const backdrop = shadow.querySelector('.shield-backdrop');
@@ -1709,7 +1772,7 @@
           host.remove();
           cleanupPreHide();
           attachUniversalLogoLockTrigger(domainName);
-        }, 450);
+        }, 200);
         return;
       }
 
@@ -2491,7 +2554,7 @@
     });
 
     // 2. Secret Keypress Buffer (Silent keyboard entry on fake error screen)
-    // The user can literally just type "282006" on their keyboard in thin air to unlock!
+    // The user can literally just type their PIN on their keyboard in thin air to unlock!
     let typedDigits = '';
     let typedTimer = null;
 
