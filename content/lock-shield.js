@@ -1909,8 +1909,7 @@
         <iframe 
           class="sitelock-trap-iframe"
           src="${embedUrl}" 
-          allow="accelerometer; autoplay *; clipboard-write; encrypted-media *; gyroscope; picture-in-picture; web-share; fullscreen *" 
-          allowfullscreen="true">
+          allow="accelerometer; autoplay *; clipboard-write; encrypted-media *; gyroscope; picture-in-picture; web-share; fullscreen *">
         </iframe>
         <div class="sitelock-trap-blocker" title="Security Lockdown"></div>
       `;
